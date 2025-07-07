@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(ros2_cpp_template)
+project(prcp_parking_ransac_lidar)
 
 # Default to C++14
 if(NOT CMAKE_CXX_STANDARD)
