@@ -16,10 +16,10 @@ ParkingSpaceDetector::ParkingSpaceDetector()
 
   //  ROI (to kill far clutter) 
   use_roi_ = declare_parameter<bool>("use_roi", true); // enable/disable ROI filtering
-  roi_x_min_ = declare_parameter<double>("roi_x_min", -8.0); // minimum X coordinate in ROI
-  roi_x_max_ = declare_parameter<double>("roi_x_max",  8.0); // etc you get it
-  roi_y_min_ = declare_parameter<double>("roi_y_min", -8.0);
-  roi_y_max_ = declare_parameter<double>("roi_y_max",  8.0);
+  roi_x_min_ = declare_parameter<double>("roi_x_min", -10.0); // minimum X coordinate in ROI
+  roi_x_max_ = declare_parameter<double>("roi_x_max",  10.0); // etc you get it
+  roi_y_min_ = declare_parameter<double>("roi_y_min", -10.0);
+  roi_y_max_ = declare_parameter<double>("roi_y_max",  10.0);
   roi_z_min_ = declare_parameter<double>("roi_z_min", -20.0);
   roi_z_max_ = declare_parameter<double>("roi_z_max",  30.2);
 

@@ -63,7 +63,8 @@ std::vector<ParkingSpaceDetector::Line> ParkingSpaceDetector::detectLines(const 
     // Early gates
     const bool flat_enough = std::abs(line.direction.z()) < flat_z_abs_max_;
     const bool long_enough = line.length >= static_cast<float>(min_geom_length_);
-    if (flat_enough && long_enough) raw_lines.push_back(line);
+    const bool not_too_long = line.length <= 8.0f; // sanity check
+    if (flat_enough && long_enough && not_too_long) raw_lines.push_back(line);
 
     // remove inliers and continue
     pcl::ExtractIndices<PointT> extract;
