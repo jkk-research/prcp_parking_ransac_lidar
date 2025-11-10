@@ -6,7 +6,7 @@ void ParkingSpaceDetector::cloudCallback(const sensor_msgs::msg::PointCloud2::Sh
   if (!msg) return;
 
   sensor_msgs::msg::PointCloud2 filtered = *msg;
-  bool used_filter = false;
+  bool used_filter = false; (void)used_filter;
   if (enabled_) {
     FieldInfo famb;
     if (findField(*msg, "ambient", famb)) { used_filter = true; filtered = filterByAmbient(*msg, famb, ambient_min_, ambient_max_); }

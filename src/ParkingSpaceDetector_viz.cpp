@@ -66,7 +66,7 @@ void ParkingSpaceDetector::publishParkingMarkers(const std::vector<ParkingSpace>
 void ParkingSpaceDetector::clearAllMarkers(const std_msgs::msg::Header &hdr)
 {
   visualization_msgs::msg::MarkerArray arr;
-  for (const std::string &ns : {"detected_lines", "parking_spaces", "parking_spaces_text"}) {
+  for (const char* ns : {"detected_lines", "parking_spaces", "parking_spaces_text"}) {
     visualization_msgs::msg::Marker m; m.header = hdr; m.ns = ns; m.action = visualization_msgs::msg::Marker::DELETEALL; arr.markers.push_back(m);
   }
   lines_pub_->publish(arr); marker_pub_->publish(arr);

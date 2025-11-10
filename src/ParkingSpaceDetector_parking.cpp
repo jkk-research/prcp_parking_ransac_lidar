@@ -1,7 +1,7 @@
 #include "ParkingSpaceDetector.hpp"
 
-#include <chrono>
-using SteadyClock = std::chrono::steady_clock;
+// #include <chrono>
+// using SteadyClock = std::chrono::steady_clock;
 
 // U-shape detection
 ParkingSpaceDetector::Line2D ParkingSpaceDetector::make2D(const Line& L) { return make2D_from_Line(L); }
@@ -23,7 +23,7 @@ std::vector<ParkingSpaceDetector::ParkingSpace>
 ParkingSpaceDetector::findParkingSpaces(const std::vector<Line> &lines)
 {
   // start timer
-  const auto t0 = SteadyClock::now();
+  // const auto t0 = SteadyClock::now();
 
   std::vector<ParkingSpace> spaces;
   if (lines.size() < 2) return spaces;
@@ -260,7 +260,7 @@ ParkingSpaceDetector::findParkingSpaces(const std::vector<Line> &lines)
   }
   
 
-  const auto t1 = SteadyClock::now();
+  // const auto t1 = SteadyClock::now();
 
   // const double ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
   // RCLCPP_INFO(this->get_logger(), "Parking space detection took %.3f ms", ms);
