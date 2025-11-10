@@ -46,6 +46,7 @@ ament_target_dependencies(prcp_parking_ransac_lidar_node
   rclcpp
   sensor_msgs
   visualization_msgs
+  geometry_msgs
   pcl_conversions
   pcl_ros
 )

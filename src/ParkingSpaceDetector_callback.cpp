@@ -25,6 +25,13 @@ void ParkingSpaceDetector::cloudCallback(const sensor_msgs::msg::PointCloud2::Sh
   auto spaces = findParkingSpaces(lines);
   publishParkingMarkers(spaces, filtered.header);
 
+  // Publish PoseArray for all spaces
+  geometry_msgs::msg::PoseArray pa;
+  pa.header = filtered.header;               // frame_id stays the same as the cloud
+  pa.poses.reserve(spaces.size());
+  for (const auto &s : spaces) pa.poses.push_back(poseFromSpace(s));
+  poses_pub_->publish(pa);
+
   RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 2000, "Lines: %zu, Parking spaces: %zu", lines.size(), spaces.size());
 }
 

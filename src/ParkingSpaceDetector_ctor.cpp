@@ -88,6 +88,8 @@ ParkingSpaceDetector::ParkingSpaceDetector()
   filtered_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("filtered_points", 10); // just to validate if we can still see the parking space with the filter on
   marker_pub_   = this->create_publisher<visualization_msgs::msg::MarkerArray>("detected_parking_spaces", 10); // visualization of detected parking spaces
   lines_pub_    = this->create_publisher<visualization_msgs::msg::MarkerArray>("detected_lines", 10); // visualization of detected lines
+  poses_pub_ = this->create_publisher<geometry_msgs::msg::PoseArray>("parking_space_poses", 10); // poses of detected parking spaces
+
 
   sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
     input_topic_, SensorDataQoS(),

@@ -6,6 +6,8 @@
 #include <sensor_msgs/msg/point_field.hpp>
 #include <std_msgs/msg/header.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
+#include <geometry_msgs/msg/pose.hpp>
+#include <geometry_msgs/msg/pose_array.hpp>
 
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -114,6 +116,7 @@ private:
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_pub_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr lines_pub_;
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr param_cb_handle_;
+  rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr poses_pub_; 
 
   // Filter params
   double ambient_min_{800.0}, ambient_max_{1300.0};
@@ -142,6 +145,12 @@ private:
   // Parking geometry
   double parking_width_{2.0}, parking_length_{4.0};
   double width_tol_{0.35}, overlap_ratio_{0.60}, end_tol_{0.50};
+
+  // Pose
+  static geometry_msgs::msg::Pose poseFromSpace(const ParkingSpace &s);
+  static geometry_msgs::msg::Quaternion quatFromYaw(float yaw);
+
+
 };
 
 #endif // PARKING_SPACE_DETECTOR_HPP

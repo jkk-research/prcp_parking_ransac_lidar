@@ -1,4 +1,5 @@
 #include "ParkingSpaceDetector.hpp"
+#include <tf2/LinearMath/Quaternion.h>
 
 // visualization messages
 void ParkingSpaceDetector::publishDetectedLines(const std::vector<Line> &lines, const std_msgs::msg::Header &hdr)
@@ -69,4 +70,33 @@ void ParkingSpaceDetector::clearAllMarkers(const std_msgs::msg::Header &hdr)
     visualization_msgs::msg::Marker m; m.header = hdr; m.ns = ns; m.action = visualization_msgs::msg::Marker::DELETEALL; arr.markers.push_back(m);
   }
   lines_pub_->publish(arr); marker_pub_->publish(arr);
+}
+
+// helper to create quaternion from yaw angle
+geometry_msgs::msg::Quaternion ParkingSpaceDetector::quatFromYaw(float yaw)
+{
+  tf2::Quaternion q;
+  q.setRPY(0.0, 0.0, static_cast<double>(yaw));
+  geometry_msgs::msg::Quaternion out;
+  out.x = q.x(); out.y = q.y(); out.z = q.z(); out.w = q.w();
+  return out;
+}
+
+// create Pose message from detected parking space
+geometry_msgs::msg::Pose ParkingSpaceDetector::poseFromSpace(const ParkingSpace &s)
+{
+  Eigen::Vector3f bottom_mid = 0.5f * (s.corner1 + s.corner2);
+  Eigen::Vector3f top_mid    = 0.5f * (s.corner3 + s.corner4);
+
+  // bottom -> top
+  const float yaw = std::atan2(top_mid.y() - bottom_mid.y(),
+                               top_mid.x() - bottom_mid.x());
+
+  geometry_msgs::msg::Pose pose;
+  pose.position.x = bottom_mid.x();
+  pose.position.y = bottom_mid.y();
+  pose.position.z = bottom_mid.z();
+
+  pose.orientation = quatFromYaw(yaw);
+  return pose;
 }
