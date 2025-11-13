@@ -85,8 +85,8 @@ geometry_msgs::msg::Quaternion ParkingSpaceDetector::quatFromYaw(float yaw)
 // create Pose message from detected parking space
 geometry_msgs::msg::Pose ParkingSpaceDetector::poseFromSpace(const ParkingSpace &s)
 {
-  Eigen::Vector3f bottom_mid = 0.5f * (s.corner1 + s.corner2);
-  Eigen::Vector3f top_mid    = 0.5f * (s.corner3 + s.corner4);
+  Eigen::Vector3f bottom_mid = 0.5f * (s.corner3 + s.corner4);
+  Eigen::Vector3f top_mid    = 0.5f * (s.corner1 + s.corner2);
 
   // bottom -> top
   const float yaw = std::atan2(top_mid.y() - bottom_mid.y(),
