@@ -20,6 +20,10 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
 find_package(pcl_conversions REQUIRED)
 find_package(pcl_ros REQUIRED)
 find_package(PCL REQUIRED)
@@ -45,6 +49,7 @@ add_executable(prcp_parking_ransac_lidar_node
   src/ParkingSpaceDetector_merge.cpp
   src/ParkingSpaceDetector_parking.cpp
   src/ParkingSpaceDetector_viz.cpp
+  src/ParkingSpaceDetector_bbox.cpp
 )
 
 ament_target_dependencies(prcp_parking_ransac_lidar_node
@@ -52,6 +57,9 @@ ament_target_dependencies(prcp_parking_ransac_lidar_node
   sensor_msgs
   visualization_msgs
   geometry_msgs
+  tf2
+  tf2_geometry_msgs
+  tf2_ros
   pcl_conversions
   pcl_ros
 )

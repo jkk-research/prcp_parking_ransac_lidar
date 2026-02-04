@@ -1,4 +1,5 @@
 #include "ParkingSpaceDetector.hpp"
+#include <mutex>
 
 // PointField helpers
 // findFild searches for a field by name in the PointCloud2 message
@@ -60,6 +61,34 @@ PointCloud::Ptr ParkingSpaceDetector::toPCLXYZI(const sensor_msgs::msg::PointClo
 // this may be slower than a pcl bounding box check, but more flexible, and realistically it's so slow atm it doesn't matter much
 bool ParkingSpaceDetector::inROI(const PointT& p) const {
   if (!use_roi_) return true;
+  
+  // Use bbox as ROI if enabled
+  if (use_bbox_roi_) {
+    std::lock_guard<std::mutex> lock(const_cast<std::mutex&>(bbox_mutex_));
+    if (bbox_corners_lidar_.size() != 4) return false; // No bbox available yet
+    
+    // 2D point-in-polygon test (ray casting algorithm)
+    // Check if point (p.x, p.y) is inside the bbox quadrilateral
+    float x = p.x;
+    float y = p.y;
+    
+    bool inside = false;
+    for (size_t i = 0, j = 3; i < 4; j = i++) {
+      float xi = bbox_corners_lidar_[i].x();
+      float yi = bbox_corners_lidar_[i].y();
+      float xj = bbox_corners_lidar_[j].x();
+      float yj = bbox_corners_lidar_[j].y();
+      
+      if (((yi > y) != (yj > y)) &&
+          (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+        inside = !inside;
+      }
+    }
+    
+    return inside;
+  }
+  
+  // Use fixed ROI bounds
   return (p.x >= roi_x_min_ && p.x <= roi_x_max_ &&
           p.y >= roi_y_min_ && p.y <= roi_y_max_ &&
           p.z >= roi_z_min_ && p.z <= roi_z_max_);

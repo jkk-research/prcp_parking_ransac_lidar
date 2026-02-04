@@ -1,6 +1,10 @@
 #include "ParkingSpaceDetector.hpp"
 #include <pcl/filters/extract_indices.h>
 #include <pcl/segmentation/sac_segmentation.h>
+#include <std_msgs/msg/int32_multi_array.hpp>
+#include <sensor_msgs/msg/camera_info.hpp>
+#include <tf2_ros/transform_listener.h>
+#include <tf2_ros/buffer.h>
 
 // Constructor
 ParkingSpaceDetector::ParkingSpaceDetector()
@@ -22,13 +26,17 @@ ParkingSpaceDetector::ParkingSpaceDetector()
   roi_y_max_ = declare_parameter<double>("roi_y_max",  10.0);
   roi_z_min_ = declare_parameter<double>("roi_z_min", -20.0);
   roi_z_max_ = declare_parameter<double>("roi_z_max",  30.2);
+  
+  // BBox ROI
+  use_bbox_roi_ = declare_parameter<bool>("use_bbox_roi", true); // use camera bbox as ROI instead; if true, it overrides the above ROI
+  bbox_roi_scale_ = declare_parameter<double>("bbox_roi_scale", 2.0); // scale factor for bbox ROI (1.0 = no scaling)
 
   //  RANSAC / detection 
-  line_threshold_   = declare_parameter<double>("line_threshold", 0.08); // meters, distance threshold for line fitting
+  line_threshold_   = declare_parameter<double>("line_threshold", 0.18); // meters, distance threshold for line fitting
   min_line_points_  = declare_parameter<int>("min_line_points", 24); // minimum number of points for a line to be valid
 
   // line acceptance gates
-  flat_z_abs_max_   = declare_parameter<double>("flat_z_abs_max", 0.15);  // the maximum absolute Z deviation for a line to be considered flat
+  flat_z_abs_max_   = declare_parameter<double>("flat_z_abs_max", 0.25);  // the maximum absolute Z deviation for a line to be considered flat
   min_geom_length_  = declare_parameter<double>("min_geom_length", 0.80); // minimum length of a line to be considered valid
 
   //  Merge colinear fragments (in case they didn't fit in the distance threshold in ransac)
@@ -63,6 +71,8 @@ ParkingSpaceDetector::ParkingSpaceDetector()
         else if (n=="roi_y_max") roi_y_max_ = p.as_double();
         else if (n=="roi_z_min") roi_z_min_ = p.as_double();
         else if (n=="roi_z_max") roi_z_max_ = p.as_double();
+        else if (n=="use_bbox_roi") use_bbox_roi_ = p.as_bool();
+        else if (n=="bbox_roi_scale") bbox_roi_scale_ = p.as_double();
 
         else if (n=="line_threshold") line_threshold_ = p.as_double();
         else if (n=="min_line_points") min_line_points_ = p.as_int();
@@ -95,5 +105,29 @@ ParkingSpaceDetector::ParkingSpaceDetector()
     input_topic_, SensorDataQoS(),
     std::bind(&ParkingSpaceDetector::cloudCallback, this, std::placeholders::_1));
 
-  RCLCPP_INFO(this->get_logger(), "Parking Space Detector runningasd (input: %s)", input_topic_.c_str());
+  // Bounding box / camera -> lidar visualization parameters
+  bbox_topic_ = declare_parameter<std::string>("bbox_topic", "parking_places/detections/boxes");
+  camera_frame_ = declare_parameter<std::string>("camera_frame", "zed_camera_front");
+  lidar_frame_ = declare_parameter<std::string>("lidar_frame", "os_sensor");
+  bbox_forward_dist_ = declare_parameter<double>("bbox_forward_dist", 4.0);
+  bbox_marker_width_ = declare_parameter<double>("bbox_marker_width", 2.0);
+  bbox_marker_length_ = declare_parameter<double>("bbox_marker_length", 4.0);
+
+  bbox_sub_ = this->create_subscription<std_msgs::msg::Int32MultiArray>(
+    bbox_topic_, 10, std::bind(&ParkingSpaceDetector::bboxCallback, this, std::placeholders::_1));
+
+  camera_info_sub_ = this->create_subscription<sensor_msgs::msg::CameraInfo>(
+    "zed2i/zed_node/left/camera_info", 10, 
+    std::bind(&ParkingSpaceDetector::cameraInfoCallback, this, std::placeholders::_1));
+
+  bbox_marker_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("camera_bbox", 10);
+
+  // TF2 buffer/listener for transforming camera points to lidar frame
+  tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
+  tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+
+  RCLCPP_INFO(this->get_logger(), "Parking Space Detector running (input: %s)", input_topic_.c_str());  
+  if (use_bbox_roi_) {
+    RCLCPP_INFO(this->get_logger(), "Using camera bounding box as ROI (scale: %.2f)", bbox_roi_scale_);
+  }
 }
