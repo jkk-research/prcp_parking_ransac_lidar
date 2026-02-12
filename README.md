@@ -1,5 +1,9 @@
 # `prcp_parking_ransac_lidar` package
 ROS 2 C++ package.  [![Static Badge](https://img.shields.io/badge/ROS_2-Humble-34aec5)](https://docs.ros.org/en/humble/)
+
+![](img/parking_problem01.svg)
+![](img/parking_cam_lidar01.png)
+
 ## Packages and build
 
 It is assumed that the workspace is `~/ros2_ws/`.
