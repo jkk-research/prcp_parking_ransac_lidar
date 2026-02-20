@@ -39,17 +39,14 @@ link_directories(
 
 add_definitions(${PCL_DEFINITIONS})
 
-# Build 
+# Build
 add_executable(prcp_parking_ransac_lidar_node
   src/main.cpp
   src/ParkingSpaceDetector_ctor.cpp
   src/ParkingSpaceDetector_helpers.cpp
   src/ParkingSpaceDetector_callback.cpp
-  src/ParkingSpaceDetector_detect.cpp
-  src/ParkingSpaceDetector_merge.cpp
-  src/ParkingSpaceDetector_parking.cpp
-  src/ParkingSpaceDetector_viz.cpp
   src/ParkingSpaceDetector_bbox.cpp
+  src/ParkingSpaceDetector_viz.cpp
 )
 
 ament_target_dependencies(prcp_parking_ransac_lidar_node

@@ -69,11 +69,14 @@ bool ParkingSpaceDetector::inROI(const PointT& p) const {
     
     // 2D point-in-polygon test (ray casting algorithm)
     // Check if point (p.x, p.y) is inside the bbox quadrilateral
+    // Winding order matches visualization marker: TL->TR->BR->BL (indices 0,1,3,2)
     float x = p.x;
     float y = p.y;
     
+    static const size_t order[4] = {0, 1, 3, 2};
     bool inside = false;
-    for (size_t i = 0, j = 3; i < 4; j = i++) {
+    for (size_t k = 0; k < 4; ++k) {
+      size_t i = order[k], j = order[(k + 3) % 4];
       float xi = bbox_corners_lidar_[i].x();
       float yi = bbox_corners_lidar_[i].y();
       float xj = bbox_corners_lidar_[j].x();

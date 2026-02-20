@@ -37,7 +37,7 @@ public:
   ParkingSpaceDetector();
 
 private:
-  //  PointField helpers 
+  // PointField helpers
   struct FieldInfo { int32_t offset{-1}; uint8_t datatype{0}; };
 
   static bool findField(const sensor_msgs::msg::PointCloud2 &cloud,
@@ -47,7 +47,9 @@ private:
 
   static PointCloud::Ptr toPCLXYZI(const sensor_msgs::msg::PointCloud2 &cloud);
 
-  //  Core callback 
+  bool inROI(const PointT& p) const;
+
+  // Core callback: read cloud, apply ambient filter, publish filtered cloud
   void cloudCallback(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
 
   // Ambient filter
@@ -55,71 +57,31 @@ private:
   filterByAmbient(const sensor_msgs::msg::PointCloud2 &in,
                   const FieldInfo &famb, double amin, double amax);
 
-  //  Detection bits 
-  struct Line {
-    Eigen::Vector3f point;
-    Eigen::Vector3f direction;
-    std::vector<int> inliers;
-    float length{0};
-    Eigen::Vector3f start_point;
-    Eigen::Vector3f end_point;
-    std::vector<Eigen::Vector3f> inlier_pts; // for merging (3D, but we use XY)
+  // BBox ROI filter (applied before ambient filter)
+  sensor_msgs::msg::PointCloud2
+  filterByBboxROI(const sensor_msgs::msg::PointCloud2 &in);
+
+  // BBox callbacks
+  void bboxCallback(const std_msgs::msg::Int32MultiArray::SharedPtr msg);
+  void cameraInfoCallback(const sensor_msgs::msg::CameraInfo::SharedPtr msg);
+
+  // Camera model for deprojection
+  struct CameraIntrinsics {
+    Eigen::Matrix3f mat;
+    Eigen::Matrix3f mat_inv;
+    bool valid{false};
   };
+  CameraIntrinsics camera_intrinsics_;
 
-  struct ParkingSpace {
-    Eigen::Vector3f center{0,0,0};
-    Eigen::Vector3f corner1, corner2, corner3, corner4;
-    float width{0}, length{0};
-    float angle{0};
-  };
+  // Deproject pixel (u,v) to 3D point on ground plane
+  Eigen::Vector3f deprojectPixel(int u, int v);
 
-  bool inROI(const PointT& p) const;
-
-  std::vector<Line> detectLines(const PointCloud::Ptr &cloud);
-
-  //  Merge co-linear lines (2D, PCA-based) 
-  struct Line2D {
-    Eigen::Vector2f p;   // point on line
-    Eigen::Vector2f d;   // unit direction
-    float z;             // avg z
-    Eigen::Vector2f a;   // start
-    Eigen::Vector2f b;   // end
-    float span_min, span_max;
-  };
-
-  static Line2D make2D_from_Line(const Line& L);
-
-  static float angleBetweenDeg(const Eigen::Vector2f& a, const Eigen::Vector2f& b);
-
-  static float perpDist(const Line2D& A, const Line2D& B);
-
-  static float overlapAlongA(const Line2D& A, const Line2D& B);
-
-  std::vector<Line> mergeColinearLines2D(const std::vector<Line>& lines);
-
-  //  U-shape detection (2D, robust) 
-  static Line2D make2D(const Line& L);
-
-  static float perpendicularDistance(const Line2D& A, const Line2D& B);
-
-  static float projectedOverlap(const Line2D& A, const Line2D& B);
-
-  static bool backAtLineEnds(const Line2D& A, const Line2D& B, const Line2D& C, float end_tol);
-
-  std::vector<ParkingSpace> findParkingSpaces(const std::vector<Line> &lines);
-
-  //  Visualization 
-  void publishDetectedLines(const std::vector<Line> &lines, const std_msgs::msg::Header &hdr);
-
-  void publishParkingMarkers(const std::vector<ParkingSpace> &spaces, const std_msgs::msg::Header &hdr);
-
+  // Visualization helper to clear markers
   void clearAllMarkers(const std_msgs::msg::Header &hdr);
 
-  //  Members 
+  // Members
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr sub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr filtered_pub_;
-  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_pub_;
-  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr lines_pub_;
   // bounding-box visualization
   rclcpp::Subscription<std_msgs::msg::Int32MultiArray>::SharedPtr bbox_sub_;
   rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr camera_info_sub_;
@@ -129,66 +91,25 @@ private:
   std::string bbox_topic_{"parking_places/detections/boxes"};
   std::string camera_frame_{"zed_camera_front"};
   std::string lidar_frame_{"os_sensor"};
-  double bbox_forward_dist_{4.0};
-  double bbox_marker_width_{2.0};
-  double bbox_marker_length_{4.0};
-  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr param_cb_handle_;
-  rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr poses_pub_; 
 
-  // bbox callbacks
-  void bboxCallback(const std_msgs::msg::Int32MultiArray::SharedPtr msg);
-  void cameraInfoCallback(const sensor_msgs::msg::CameraInfo::SharedPtr msg);
-  
-  // Camera model for deprojection
-  struct CameraIntrinsics {
-    Eigen::Matrix3f mat;
-    Eigen::Matrix3f mat_inv;
-    bool valid{false};
-  };
-  CameraIntrinsics camera_intrinsics_;
-  
-  // Deproject pixel (u,v) to 3D point on ground plane
-  Eigen::Vector3f deprojectPixel(int u, int v);
+  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr param_cb_handle_;
 
   // Filter params
   double ambient_min_{800.0}, ambient_max_{1300.0};
   bool   enabled_{true};
   std::string input_topic_{"ouster/points"};
-  double intensity_min_{0.0}, intensity_max_{0.0};
 
   // ROI
   bool   use_roi_{true};
   double roi_x_min_{-8.0}, roi_x_max_{6.0};
   double roi_y_min_{-4.0}, roi_y_max_{4.0};
   double roi_z_min_{-2.0}, roi_z_max_{0.2};
-  
+
   // BBox ROI
   bool use_bbox_roi_{false};
   double bbox_roi_scale_{1.0}; // multiplier to inflate bbox ROI
   std::vector<Eigen::Vector3f> bbox_corners_lidar_; // 4 corners in lidar frame
   std::mutex bbox_mutex_;
-
-  // RANSAC / line gates
-  double line_threshold_{0.08};
-  int    min_line_points_{24};
-  double flat_z_abs_max_{0.15};
-  double min_geom_length_{0.80};
-
-  // Merge
-  double merge_angle_tol_deg_{8.0};
-  double merge_dist_tol_{0.18};
-  double merge_min_overlap_{0.30};
-  double min_merged_length_{1.0};
-
-  // Parking geometry
-  double parking_width_{2.0}, parking_length_{4.0};
-  double width_tol_{0.35}, overlap_ratio_{0.60}, end_tol_{0.50};
-
-  // Pose
-  static geometry_msgs::msg::Pose poseFromSpace(const ParkingSpace &s);
-  static geometry_msgs::msg::Quaternion quatFromYaw(float yaw);
-
-
 };
 
 #endif // PARKING_SPACE_DETECTOR_HPP
