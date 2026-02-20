@@ -19,9 +19,16 @@ void ParkingSpaceDetector::cloudCallback(const sensor_msgs::msg::PointCloud2::Sh
 
   filtered_pub_->publish(filtered);
 
-  // If cloud is empty after filter, clear markers
+  // Run RANSAC line detection on the filtered cloud
   PointCloud::Ptr pcl_cloud = toPCLXYZI(filtered);
-  if (!pcl_cloud || pcl_cloud->empty()) { clearAllMarkers(filtered.header); }
+  if (!pcl_cloud || pcl_cloud->empty()) {
+    clearAllMarkers(filtered.header);
+  } else {
+    if (voxel_filter_enabled_)
+      pcl_cloud = voxelFilter2D(pcl_cloud, static_cast<float>(voxel_leaf_size_));
+    auto lines = detectLines(pcl_cloud, filtered.header);
+    findParkingSpaces(lines, filtered.header);
+  }
 }
 
 // BBox ROI filter: keep only points inside the transformed+scaled bbox polygon
@@ -55,7 +62,6 @@ ParkingSpaceDetector::filterByBboxROI(const sensor_msgs::msg::PointCloud2 &in)
     float y = readAsFloat(src, fy);
     if (std::isnan(x) || std::isnan(y)) continue;
 
-    // 2D point-in-polygon (ray casting), same winding as visualization: TL->TR->BR->BL
     static const size_t order[4] = {0, 1, 3, 2};
     bool inside = false;
     for (size_t k = 0; k < 4; ++k) {

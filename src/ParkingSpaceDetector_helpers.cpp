@@ -1,4 +1,5 @@
 #include "ParkingSpaceDetector.hpp"
+#include <map>
 #include <mutex>
 
 // PointField helpers
@@ -57,8 +58,47 @@ PointCloud::Ptr ParkingSpaceDetector::toPCLXYZI(const sensor_msgs::msg::PointClo
   return out;
 }
 
+// 2D voxel grid: one representative point per (x,y) voxel cell.
+// All output points share the cloud's mean Z so RANSAC works on a flat surface.
+PointCloud::Ptr ParkingSpaceDetector::voxelFilter2D(const PointCloud::Ptr &cloud, float leaf_size)
+{
+  if (!cloud || cloud->empty() || leaf_size <= 0.0f) return cloud;
+
+  struct Accum { float sx{0}, sy{0}; int n{0}; };
+  std::map<std::pair<int32_t, int32_t>, Accum> cells;
+
+  const float inv = 1.0f / leaf_size;
+  float sum_z = 0.0f;
+
+  for (const auto &pt : cloud->points) {
+    auto key = std::make_pair(
+      static_cast<int32_t>(std::floor(pt.x * inv)),
+      static_cast<int32_t>(std::floor(pt.y * inv)));
+    auto &a = cells[key];
+    a.sx += pt.x; a.sy += pt.y; ++a.n;
+    sum_z += pt.z;
+  }
+
+  const float mean_z = sum_z / static_cast<float>(cloud->size());
+
+  PointCloud::Ptr out(new PointCloud);
+  out->points.reserve(cells.size());
+  for (const auto &[key, a] : cells) {
+    PointT p;
+    p.x = a.sx / a.n;
+    p.y = a.sy / a.n;
+    p.z = mean_z;
+    p.intensity = 0.0f;
+    out->points.push_back(p);
+  }
+  out->width = static_cast<uint32_t>(out->points.size());
+  out->height = 1;
+  out->is_dense = true;
+  return out;
+}
+
 // Check if a point is within the defined ROI
-// this may be slower than a pcl bounding box check, but more flexible, and realistically it's so slow atm it doesn't matter much
+// this may be slower than a pcl bounding box check, but more flexible
 bool ParkingSpaceDetector::inROI(const PointT& p) const {
   if (!use_roi_) return true;
   
@@ -67,9 +107,9 @@ bool ParkingSpaceDetector::inROI(const PointT& p) const {
     std::lock_guard<std::mutex> lock(const_cast<std::mutex&>(bbox_mutex_));
     if (bbox_corners_lidar_.size() != 4) return false; // No bbox available yet
     
-    // 2D point-in-polygon test (ray casting algorithm)
+    // 2D point-in-polygon test
     // Check if point (p.x, p.y) is inside the bbox quadrilateral
-    // Winding order matches visualization marker: TL->TR->BR->BL (indices 0,1,3,2)
+    // TL->TR->BR->BL (indices 0,1,3,2)
     float x = p.x;
     float y = p.y;
     

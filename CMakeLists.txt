@@ -47,6 +47,8 @@ add_executable(prcp_parking_ransac_lidar_node
   src/ParkingSpaceDetector_callback.cpp
   src/ParkingSpaceDetector_bbox.cpp
   src/ParkingSpaceDetector_viz.cpp
+  src/ParkingSpaceDetector_ransac.cpp
+  src/ParkingSpaceDetector_parking.cpp
 )
 
 ament_target_dependencies(prcp_parking_ransac_lidar_node

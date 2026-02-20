@@ -79,9 +79,35 @@ private:
   // Visualization helper to clear markers
   void clearAllMarkers(const std_msgs::msg::Header &hdr);
 
+  // 2D voxel grid filter: collapses points with the same (x,y) voxel into one
+  // centroid and flattens all output points to the cloud's mean Z.
+  static PointCloud::Ptr voxelFilter2D(const PointCloud::Ptr &cloud, float leaf_size);
+
+  // A single detected line segment (result of one RANSAC round + PCA refit).
+  struct LineSegment {
+    Eigen::Vector2f centroid;       // centroid of the inlier set on the XY plane
+    Eigen::Vector2f dir;            // unit direction vector of the line
+    float min_proj{0}, max_proj{0}; // signed extent from centroid along dir
+    float mean_z{0};
+    float length()               const { return max_proj - min_proj; }
+    Eigen::Vector2f start()      const { return centroid + min_proj * dir; }
+    Eigen::Vector2f end()        const { return centroid + max_proj * dir; }
+  };
+
+  // RANSAC line detection — returns the detected segments and publishes markers.
+  std::vector<LineSegment> detectLines(const PointCloud::Ptr &cloud,
+                                       const std_msgs::msg::Header &header);
+
+  // Parking space detection: finds parallel line pairs matching the expected
+  // parking space dimensions and publishes their outlines + labels.
+  void findParkingSpaces(const std::vector<LineSegment> &lines,
+                         const std_msgs::msg::Header &header);
+
   // Members
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr sub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr filtered_pub_;
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr detected_lines_pub_;
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr parking_spaces_pub_;
   // bounding-box visualization
   rclcpp::Subscription<std_msgs::msg::Int32MultiArray>::SharedPtr bbox_sub_;
   rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr camera_info_sub_;
@@ -110,6 +136,29 @@ private:
   double bbox_roi_scale_{1.0}; // multiplier to inflate bbox ROI
   std::vector<Eigen::Vector3f> bbox_corners_lidar_; // 4 corners in lidar frame
   std::mutex bbox_mutex_;
+
+  // 2D voxel grid params
+  bool   voxel_filter_enabled_{true};
+  double voxel_leaf_size_{0.30};
+
+  // RANSAC line detection params
+  bool   ransac_enabled_{true};
+  int    ransac_max_iterations_{200};
+  double ransac_line_dist_threshold_{0.15};
+  int    ransac_min_inliers_{5};
+  int    ransac_max_lines_{8};
+  double ransac_min_line_length_{1.0};
+  double ransac_min_sample_dist_{0.3};
+  double ransac_max_line_gap_{0.5};
+
+  // Parking space detection params
+  bool   parking_detection_enabled_{true};
+  double parking_angle_tolerance_{15.0}; // degrees — how far from parallel two lines may be
+  double parking_width_min_{1.5};        // metres — minimum distance between the two lines
+  double parking_width_max_{2.8};        // metres — maximum distance between the two lines
+  double parking_length_min_{2.0};       // metres — minimum longitudinal overlap of the pair
+  double parking_length_max_{6.0};       // metres — maximum longitudinal overlap of the pair
+  double parking_line_length_min_{1.5};  // metres — individual line must be at least this long
 };
 
 #endif // PARKING_SPACE_DETECTOR_HPP

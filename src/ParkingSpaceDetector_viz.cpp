@@ -3,10 +3,19 @@
 // clear markers used by the node (keeps visualization tidy)
 void ParkingSpaceDetector::clearAllMarkers(const std_msgs::msg::Header &hdr)
 {
-  visualization_msgs::msg::MarkerArray arr;
-  for (const char* ns : {"detected_lines", "parking_spaces", "parking_spaces_text"}) {
-    visualization_msgs::msg::Marker m; m.header = hdr; m.ns = ns; m.action = visualization_msgs::msg::Marker::DELETEALL; arr.markers.push_back(m);
+  // Clear detected_lines on its own publisher
+  if (detected_lines_pub_) {
+    visualization_msgs::msg::MarkerArray lines_arr;
+    visualization_msgs::msg::Marker m; m.header = hdr; m.ns = "detected_lines"; m.action = visualization_msgs::msg::Marker::DELETEALL;
+    lines_arr.markers.push_back(m);
+    detected_lines_pub_->publish(lines_arr);
   }
-  // Publish to bbox marker publisher as a safe place for clearing
-  if (bbox_marker_pub_) bbox_marker_pub_->publish(arr);
+
+  // Clear parking spaces on its own publisher
+  if (parking_spaces_pub_) {
+    visualization_msgs::msg::MarkerArray ps_arr;
+    visualization_msgs::msg::Marker m; m.header = hdr; m.ns = "parking_spaces"; m.action = visualization_msgs::msg::Marker::DELETEALL;
+    ps_arr.markers.push_back(m);
+    parking_spaces_pub_->publish(ps_arr);
+  }
 }

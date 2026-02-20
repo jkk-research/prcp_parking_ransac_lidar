@@ -26,7 +26,7 @@ ParkingSpaceDetector::ParkingSpaceDetector()
   use_bbox_roi_ = declare_parameter<bool>("use_bbox_roi", true);
   bbox_roi_scale_ = declare_parameter<double>("bbox_roi_scale", 2.0);
 
-  // Live parameter updates (only for parameters we keep)
+  // Live parameter updates
   param_cb_handle_ = this->add_on_set_parameters_callback(
     [this](const std::vector<rclcpp::Parameter> &params)
     {
@@ -45,13 +45,69 @@ ParkingSpaceDetector::ParkingSpaceDetector()
         else if (n=="roi_z_max") roi_z_max_ = p.as_double();
         else if (n=="use_bbox_roi") use_bbox_roi_ = p.as_bool();
         else if (n=="bbox_roi_scale") bbox_roi_scale_ = p.as_double();
+
+        else if (n=="voxel_filter_enabled") voxel_filter_enabled_ = p.as_bool();
+        else if (n=="voxel_leaf_size")      voxel_leaf_size_      = p.as_double();
+
+        else if (n=="ransac_enabled")             ransac_enabled_             = p.as_bool();
+        else if (n=="ransac_max_iterations")      ransac_max_iterations_      = static_cast<int>(p.as_int());
+        else if (n=="ransac_line_dist_threshold") ransac_line_dist_threshold_ = p.as_double();
+        else if (n=="ransac_min_inliers")         ransac_min_inliers_         = static_cast<int>(p.as_int());
+        else if (n=="ransac_max_lines")           ransac_max_lines_           = static_cast<int>(p.as_int());
+        else if (n=="ransac_min_line_length")     ransac_min_line_length_     = p.as_double();
+        else if (n=="ransac_min_sample_dist")     ransac_min_sample_dist_     = p.as_double();
+        else if (n=="ransac_max_line_gap")        ransac_max_line_gap_        = p.as_double();
+
+        else if (n=="parking_detection_enabled") parking_detection_enabled_ = p.as_bool();
+        else if (n=="parking_angle_tolerance")   parking_angle_tolerance_   = p.as_double();
+        else if (n=="parking_width_min")         parking_width_min_         = p.as_double();
+        else if (n=="parking_width_max")         parking_width_max_         = p.as_double();
+        else if (n=="parking_length_min")        parking_length_min_        = p.as_double();
+        else if (n=="parking_length_max")        parking_length_max_        = p.as_double();
+        else if (n=="parking_line_length_min")   parking_line_length_min_   = p.as_double();
       }
       rcl_interfaces::msg::SetParametersResult res; res.successful = true; return res;
     });
 
+  voxel_filter_enabled_ = declare_parameter<bool>("voxel_filter_enabled", false);
+  voxel_leaf_size_ = declare_parameter<double>("voxel_leaf_size", 0.30);
+
+  ransac_enabled_ = declare_parameter<bool>("ransac_enabled", true);
+
+  ransac_max_iterations_ = declare_parameter<int>("ransac_max_iterations", 200);
+
+  ransac_line_dist_threshold_ = declare_parameter<double>("ransac_line_dist_threshold", 0.15);
+
+  ransac_min_inliers_ = declare_parameter<int>("ransac_min_inliers", 5);
+
+  ransac_max_lines_ = declare_parameter<int>("ransac_max_lines", 8);
+
+  ransac_min_line_length_ = declare_parameter<double>("ransac_min_line_length", 1.0);
+
+  ransac_min_sample_dist_ = declare_parameter<double>("ransac_min_sample_dist", 0.3);
+
+
+  ransac_max_line_gap_ = declare_parameter<double>("ransac_max_line_gap", 0.5);
+
+  parking_detection_enabled_ = declare_parameter<bool>("parking_detection_enabled", true);
+
+
+  parking_angle_tolerance_ = declare_parameter<double>("parking_angle_tolerance", 15.0);
+
+  parking_width_min_ = declare_parameter<double>("parking_width_min", 1.5);
+  parking_width_max_ = declare_parameter<double>("parking_width_max", 2.8);
+
+  parking_length_min_ = declare_parameter<double>("parking_length_min", 2.0);
+  parking_length_max_ = declare_parameter<double>("parking_length_max", 6.0);
+
+
+  parking_line_length_min_ = declare_parameter<double>("parking_line_length_min", 1.5);
+
   // Pub/Sub
   using rclcpp::SensorDataQoS;
-  filtered_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("filtered_points", 10);
+  filtered_pub_       = this->create_publisher<sensor_msgs::msg::PointCloud2>("filtered_points", 10);
+  detected_lines_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("detected_lines", 10);
+  parking_spaces_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("parking_spaces", 10);
 
   sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
     input_topic_, SensorDataQoS(),
