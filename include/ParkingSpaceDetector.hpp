@@ -79,6 +79,9 @@ private:
   // Visualization helper to clear markers
   void clearAllMarkers(const std_msgs::msg::Header &hdr);
 
+  // Pose helpers
+  static geometry_msgs::msg::Quaternion quatFromYaw(float yaw);
+
   // 2D voxel grid filter: collapses points with the same (x,y) voxel into one
   // centroid and flattens all output points to the cloud's mean Z.
   static PointCloud::Ptr voxelFilter2D(const PointCloud::Ptr &cloud, float leaf_size);
@@ -108,6 +111,7 @@ private:
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr filtered_pub_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr detected_lines_pub_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr parking_spaces_pub_;
+  rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr poses_pub_;
   // bounding-box visualization
   rclcpp::Subscription<std_msgs::msg::Int32MultiArray>::SharedPtr bbox_sub_;
   rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr camera_info_sub_;

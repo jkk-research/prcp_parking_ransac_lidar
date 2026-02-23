@@ -1,4 +1,16 @@
 #include "ParkingSpaceDetector.hpp"
+#include <tf2/LinearMath/Quaternion.h>
+#include <cmath>
+
+// helper to create quaternion from yaw angle
+geometry_msgs::msg::Quaternion ParkingSpaceDetector::quatFromYaw(float yaw)
+{
+  tf2::Quaternion q;
+  q.setRPY(0.0, 0.0, static_cast<double>(yaw));
+  geometry_msgs::msg::Quaternion out;
+  out.x = q.x(); out.y = q.y(); out.z = q.z(); out.w = q.w();
+  return out;
+}
 
 // clear markers used by the node (keeps visualization tidy)
 void ParkingSpaceDetector::clearAllMarkers(const std_msgs::msg::Header &hdr)

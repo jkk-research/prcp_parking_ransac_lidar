@@ -108,6 +108,7 @@ ParkingSpaceDetector::ParkingSpaceDetector()
   filtered_pub_       = this->create_publisher<sensor_msgs::msg::PointCloud2>("filtered_points", 10);
   detected_lines_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("detected_lines", 10);
   parking_spaces_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("parking_spaces", 10);
+  poses_pub_          = this->create_publisher<geometry_msgs::msg::PoseArray>("parking_space_poses", 10);
 
   sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
     input_topic_, SensorDataQoS(),

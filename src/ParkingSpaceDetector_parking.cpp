@@ -12,8 +12,12 @@ void ParkingSpaceDetector::findParkingSpaces(const std::vector<LineSegment> &lin
   del.action = visualization_msgs::msg::Marker::DELETEALL;
   arr.markers.push_back(del);
 
+  geometry_msgs::msg::PoseArray pa;
+  pa.header = header;
+
   if (!parking_detection_enabled_ || lines.size() < 2) {
     parking_spaces_pub_->publish(arr);
+    poses_pub_->publish(pa);
     return;
   }
 
@@ -108,10 +112,24 @@ void ParkingSpaceDetector::findParkingSpaces(const std::vector<LineSegment> &lin
       txt.text = "PARKING";
       arr.markers.push_back(txt);
 
+      // Build pose: position at the near-end midpoint, yaw along the longitudinal axis.
+      // c1+c4 form the "near" edge, c2+c3 the "far" edge.
+      Eigen::Vector2f near_mid = 0.5f * (c1 + c4);
+      Eigen::Vector2f far_mid  = 0.5f * (c2 + c3);
+      float yaw = std::atan2(near_mid.y() - far_mid.y(), near_mid.x() - far_mid.x());
+
+      geometry_msgs::msg::Pose pose;
+      pose.position.x = far_mid.x();
+      pose.position.y = far_mid.y();
+      pose.position.z = mean_z;
+      pose.orientation = quatFromYaw(yaw);
+      pa.poses.push_back(pose);
+
       ++ps_id;
       break;
     }
   }
 
   parking_spaces_pub_->publish(arr);
+  poses_pub_->publish(pa);
 }
